@@ -6,7 +6,7 @@ on:
       - main
   pull_request:
     branches:
-      - main    # Workflow triggers for PRs to main
+      - main
 
 jobs:
   train_evaluate:
@@ -52,16 +52,19 @@ jobs:
           path: data/preprocessed.csv
           retention-days: 7
 
-      - name: Build Docker image
-        if: success()
-        run: docker build -t ml-model:v${{ github.run_number }} -f Dockerfile.serve .
+      # Build and Push Docker image to GitHub Container Registry (GHCR)
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Push Docker image to ECR
-        if: success()
-        run: |
-          aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_URL
-          docker tag ml-model:v${{ github.run_number }} $ECR_URL/ml-model:v${{ github.run_number }}
-          docker push $ECR_URL/ml-model:v${{ github.run_number }}
+      - name: Build Docker image
+        run: docker build -t ghcr.io/${{ github.repository_owner }}/ml-model:v${{ github.run_number }} -f Dockerfile.serve .
+
+      - name: Push Docker image
+        run: docker push ghcr.io/${{ github.repository_owner }}/ml-model:v${{ github.run_number }}
 
       - name: Model training summary
         if: always()
@@ -71,3 +74,4 @@ jobs:
           echo "- **Model Version:** v${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Pushed Image:** ghcr.io/${{ github.repository_owner }}/ml-model:v${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
