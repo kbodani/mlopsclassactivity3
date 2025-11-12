@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   train_evaluate:
@@ -19,7 +22,9 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Preprocess data
         run: python preprocess.py
@@ -28,10 +33,30 @@ jobs:
         run: python train.py --version ${{ github.run_number }}
 
       - name: Evaluate model
+        id: evaluate
         run: python evaluate.py --model model_v${{ github.run_number }}.pkl
 
       - name: Upload model artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: model-v${{ github.run_number }}
           path: model_v${{ github.run_number }}.pkl
+          retention-days: 30
+
+      - name: Upload preprocessed data
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preprocessed-data-v${{ github.run_number }}
+          path: data/preprocessed.csv
+          retention-days: 7
+
+      - name: Model training summary
+        if: always()
+        run: |
+          echo "### Model Training Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Run Number:** ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Model Version:** v${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY

@@ -44,6 +44,8 @@ Artifacts and Docker builds will appear automatically.
 
 ---
 
+Last updated: 11/12/2025 - Testing CI/CD pipeline!
+
 ## 📚 References
 
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
