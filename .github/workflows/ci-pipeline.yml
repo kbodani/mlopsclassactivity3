@@ -6,7 +6,7 @@ on:
       - main
   pull_request:
     branches:
-      - main    # Workflow now triggers for PRs to main
+      - main    # Workflow triggers for PRs to main
 
 jobs:
   train_evaluate:
@@ -51,6 +51,17 @@ jobs:
           name: preprocessed-data-v${{ github.run_number }}
           path: data/preprocessed.csv
           retention-days: 7
+
+      - name: Build Docker image
+        if: success()
+        run: docker build -t ml-model:v${{ github.run_number }} -f Dockerfile.serve .
+
+      - name: Push Docker image to ECR
+        if: success()
+        run: |
+          aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_URL
+          docker tag ml-model:v${{ github.run_number }} $ECR_URL/ml-model:v${{ github.run_number }}
+          docker push $ECR_URL/ml-model:v${{ github.run_number }}
 
       - name: Model training summary
         if: always()
