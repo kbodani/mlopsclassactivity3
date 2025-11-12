@@ -1,0 +1,73 @@
+Discussion Questions:
+1 How does CI/CD improve collaboration in ML teams?
+
+CI/CD improves ML team collaboration by:
+Automation: Eliminates manual steps, reducing human error and ensuring consistency across team members
+Version Control: Every model is versioned (like model_v1.pkl), making it easy to track which code produced which model
+Reproducibility: The same code always produces the same results, enabling team members to reproduce experiments
+Quality Gates: Automated evaluation (like the accuracy threshold) prevents bad models from being deployed
+Visibility: Everyone can see workflow results in GitHub Actions, improving transparency
+Faster Feedback: Immediate feedback on code changes helps teams iterate quickly
+Documentation: Workflow files serve as living documentation of the ML pipeline
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+2 What happens if the evaluation score is below a defined threshold?
+
+When evaluation_score < 0.threshold:
+- The pipeline FAILS (red X in GitHub Actions)
+- Model artifact is NOT uploaded (due to if: success() condition)
+- Team gets notified of the failure
+- Prevents bad models from reaching production
+- Forces the team to investigate why performance dropped
+This is a "quality gate" - it ensures only models meeting minimum standards proceed.
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+3 How can retraining or drift detection be integrated into this workflow?
+
+A. Scheduled Retraining
+Use CI/CD workflows (e.g., GitHub Actions) with a cron schedule to retrain models regularly.
+Example: weekly retraining on Sundays.
+
+B. Drift Detection
+Detect data distribution changes using statistical tests like KS test.
+Trigger alerts or retraining when drift is detected (through code)
+
+C. Performance Monitoring
+Store model metrics in a database or S3.
+Compare new model accuracy with production; retrain if accuracy drops >5%.
+
+D. Data-Driven Triggers
+Retrain when a certain number of new samples are collected.
+Use webhooks or external triggers to start workflows automatically.
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+4 What steps are needed to deploy this workflow to production (e.g., AWS, Kubernetes)?
+
+Step 1: Containerization
+Use Dockerfiles to package the model.
+Build images in CI/CD and push to a container registry (like AWS ECR).
+Tagging images with a unique identifier (run number, git commit hash) ensures reproducibility.
+
+Step 2: Infrastructure as Code (IaC)
+Define Kubernetes manifests (Deployment, Service, Ingress).
+Using Terraform or CloudFormation for AWS resources ensures the infrastructure is versioned and reproducible. 
+You might also define autoscaling policies and resource limits here.
+
+Step 3: Continuous Deployment (CD) Pipeline
+Add a deployment step to your CI/CD workflow.
+Using kubectl set image and rollout status ensures the new model version is deployed safely.
+Make sure the step only triggers on the main branch (production).
+
+Step 4: Production Requirements
+Model Registry: MLflow, W&B for versioning and tracking metrics
+Monitoring: Prometheus + Grafana for metrics and performance
+Logging: CloudWatch or ELK stack for debugging and auditing
+A/B Testing: Route traffic between versions to validate performance
+Rollback Strategy: Keep old versions deployable for quick rollback
+Secrets Management: AWS Secrets Manager to protect credentials
+API Gateway: Serve the model securely and scalably
+
+-----------------------------------------------------------------------------------------------------------------------------
