@@ -6,7 +6,7 @@ on:
       - main
   pull_request:
     branches:
-      - main
+      - main   # Workflow now triggers for PRs to main
 
 jobs:
   train_evaluate:
@@ -35,6 +35,16 @@ jobs:
       - name: Evaluate model
         id: evaluate
         run: python evaluate.py --model model_v${{ github.run_number }}.pkl
+
+      - name: Quality Gate
+        if: always()
+        run: |
+          SCORE=$(python get_score.py --model model_v${{ github.run_number }}.pkl)
+          echo "Evaluation score: $SCORE"
+          if (( $(echo "$SCORE < 0.5" | bc -l) )); then
+            echo "Model did not pass quality gate"
+            exit 1
+          fi
 
       - name: Upload model artifact
         if: success()
